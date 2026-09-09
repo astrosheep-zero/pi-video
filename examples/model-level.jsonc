@@ -1,0 +1,12 @@
+// Merge into an existing models.json; preserve your existing model definitions and credentials.
+{
+  "providers": {
+    "google": {
+      "modelOverrides": {
+        "gemini-3.8-flash": {
+          "video": true
+        }
+      }
+    }
+  }
+}

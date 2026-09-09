@@ -1,0 +1,15 @@
+{
+  "providers": {
+    "kimi-coding": {
+      "modelOverrides": {
+        "kimi-for-coding": { "video": true },
+        "k3": { "video": true },
+        "k3-256k": { "video": false }
+      }
+    },
+    "google": {
+      "baseUrl": "https://generativelanguage.googleapis.com",
+      "video": true
+    }
+  }
+}

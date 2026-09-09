@@ -1,0 +1,564 @@
+
+> pi-read-video@0.1.0 test
+> node --experimental-strip-types --test test/*.test.mjs
+
+TAP version 13
+# (node:876) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: JSONC handles BOM, comments, URLs, trailing commas and escaped strings
+ok 1 - JSONC handles BOM, comments, URLs, trailing commas and escaped strings
+  ---
+  duration_ms: 5.014112
+  type: 'test'
+  ...
+# Subtest: JSONC rejects invalid input "{\\"x\\": /*"
+ok 2 - JSONC rejects invalid input "{\\"x\\": /*"
+  ---
+  duration_ms: 0.354972
+  type: 'test'
+  ...
+# Subtest: JSONC rejects invalid input "{\\"x\\":\\"bad}"
+ok 3 - JSONC rejects invalid input "{\\"x\\":\\"bad}"
+  ---
+  duration_ms: 0.268617
+  type: 'test'
+  ...
+# Subtest: JSONC rejects invalid input "{\\"x\\":undefined}"
+ok 4 - JSONC rejects invalid input "{\\"x\\":undefined}"
+  ---
+  duration_ms: 0.126403
+  type: 'test'
+  ...
+# Subtest: JSONC rejects invalid input "{\\"x\\":true false}"
+ok 5 - JSONC rejects invalid input "{\\"x\\":true false}"
+  ---
+  duration_ms: 0.169538
+  type: 'test'
+  ...
+# Subtest: unconfigured models default to disabled
+ok 6 - unconfigured models default to disabled
+  ---
+  duration_ms: 0.433133
+  type: 'test'
+  ...
+# Subtest: override > model > provider, including explicit false
+ok 7 - override > model > provider, including explicit false
+  ---
+  duration_ms: 0.379232
+  type: 'test'
+  ...
+# Subtest: video rejects non-boolean "true"
+ok 8 - video rejects non-boolean "true"
+  ---
+  duration_ms: 0.380461
+  type: 'test'
+  ...
+# Subtest: video rejects non-boolean 1
+ok 9 - video rejects non-boolean 1
+  ---
+  duration_ms: 8.607814
+  type: 'test'
+  ...
+# Subtest: video rejects non-boolean null
+ok 10 - video rejects non-boolean null
+  ---
+  duration_ms: 0.693644
+  type: 'test'
+  ...
+# Subtest: video rejects non-boolean []
+ok 11 - video rejects non-boolean []
+  ---
+  duration_ms: 1.090269
+  type: 'test'
+  ...
+# Subtest: video rejects non-boolean {}
+ok 12 - video rejects non-boolean {}
+  ---
+  duration_ms: 0.279023
+  type: 'test'
+  ...
+# Subtest: bad model/override/provider structure fails closed
+ok 13 - bad model/override/provider structure fails closed
+  ---
+  duration_ms: 0.336242
+  type: 'test'
+  ...
+# Subtest: policy drops unrelated settings and secrets
+ok 14 - policy drops unrelated settings and secrets
+  ---
+  duration_ms: 0.385856
+  type: 'test'
+  ...
+# Subtest: missing models.json means disabled
+ok 15 - missing models.json means disabled
+  ---
+  duration_ms: 15.968621
+  type: 'test'
+  ...
+# Subtest: native routes select only implemented official provider/api pairs
+ok 16 - native routes select only implemented official provider/api pairs
+  ---
+  duration_ms: 0.440187
+  type: 'test'
+  ...
+# Subtest: reject unsafe or unsupported endpoint http://api.kimi.com/coding
+ok 17 - reject unsafe or unsupported endpoint http://api.kimi.com/coding
+  ---
+  duration_ms: 0.186567
+  type: 'test'
+  ...
+# Subtest: reject unsafe or unsupported endpoint https://api.kimi.com.evil.test/coding
+ok 18 - reject unsafe or unsupported endpoint https://api.kimi.com.evil.test/coding
+  ---
+  duration_ms: 0.078945
+  type: 'test'
+  ...
+# Subtest: reject unsafe or unsupported endpoint https://u:p@api.kimi.com/coding
+ok 19 - reject unsafe or unsupported endpoint https://u:p@api.kimi.com/coding
+  ---
+  duration_ms: 0.087432
+  type: 'test'
+  ...
+# Subtest: reject unsafe or unsupported endpoint https://api.kimi.com/coding?token=x
+ok 20 - reject unsafe or unsupported endpoint https://api.kimi.com/coding?token=x
+  ---
+  duration_ms: 0.072449
+  type: 'test'
+  ...
+# Subtest: reject unsafe or unsupported endpoint https://api.kimi.com:444/coding
+ok 21 - reject unsafe or unsupported endpoint https://api.kimi.com:444/coding
+  ---
+  duration_ms: 0.058196
+  type: 'test'
+  ...
+# Subtest: reject unsafe or unsupported endpoint https://api.kimi.com/other
+ok 22 - reject unsafe or unsupported endpoint https://api.kimi.com/other
+  ---
+  duration_ms: 0.077685
+  type: 'test'
+  ...
+# Subtest: reject unsafe or unsupported endpoint not a url
+ok 23 - reject unsafe or unsupported endpoint not a url
+  ---
+  duration_ms: 0.085097
+  type: 'test'
+  ...
+# Subtest: Google API paths and trailing slashes normalize safely
+ok 24 - Google API paths and trailing slashes normalize safely
+  ---
+  duration_ms: 0.404093
+  type: 'test'
+  ...
+# Subtest: raw file budgets account for base64 overhead
+ok 25 - raw file budgets account for base64 overhead
+  ---
+  duration_ms: 0.136427
+  type: 'test'
+  ...
+# (node:877) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: file is read once into matching hash/base64 and durable metadata
+ok 26 - file is read once into matching hash/base64 and durable metadata
+  ---
+  duration_ms: 12.537093
+  type: 'test'
+  ...
+# Subtest: path supports quoted @ paths and rejects empty/NUL/URL
+ok 27 - path supports quoted @ paths and rejects empty/NUL/URL
+  ---
+  duration_ms: 0.655997
+  type: 'test'
+  ...
+# Subtest: outside directory and symlinks cannot masquerade as workspace media
+ok 28 - outside directory and symlinks cannot masquerade as workspace media
+  ---
+  duration_ms: 15.211592
+  type: 'test'
+  ...
+# Subtest: empty, directory, unsupported extension and oversized files fail early
+ok 29 - empty, directory, unsupported extension and oversized files fail early
+  ---
+  duration_ms: 4.284836
+  type: 'test'
+  ...
+# Subtest: file replacement between inspection and encoding is rejected
+ok 30 - file replacement between inspection and encoding is rejected
+  ---
+  duration_ms: 8.711213
+  type: 'test'
+  ...
+# Subtest: abort prevents inspection and encoding
+ok 31 - abort prevents inspection and encoding
+  ---
+  duration_ms: 3.268458
+  type: 'test'
+  ...
+# Subtest: container sniff .mp4
+ok 32 - container sniff .mp4
+  ---
+  duration_ms: 0.290957
+  type: 'test'
+  ...
+# Subtest: container sniff .mov
+ok 33 - container sniff .mov
+  ---
+  duration_ms: 0.200786
+  type: 'test'
+  ...
+# Subtest: container sniff .3gp
+ok 34 - container sniff .3gp
+  ---
+  duration_ms: 0.191516
+  type: 'test'
+  ...
+# Subtest: container sniff .webm
+ok 35 - container sniff .webm
+  ---
+  duration_ms: 0.30216
+  type: 'test'
+  ...
+# Subtest: container sniff .mkv
+ok 36 - container sniff .mkv
+  ---
+  duration_ms: 0.089807
+  type: 'test'
+  ...
+# Subtest: container sniff .avi
+ok 37 - container sniff .avi
+  ---
+  duration_ms: 0.082071
+  type: 'test'
+  ...
+# Subtest: container sniff .mpeg
+ok 38 - container sniff .mpeg
+  ---
+  duration_ms: 0.141803
+  type: 'test'
+  ...
+# Subtest: container sniff .mpg
+ok 39 - container sniff .mpg
+  ---
+  duration_ms: 0.134554
+  type: 'test'
+  ...
+# Subtest: container sniff .flv
+ok 40 - container sniff .flv
+  ---
+  duration_ms: 0.07156
+  type: 'test'
+  ...
+# Subtest: renamed text or AVIF is not accepted as video
+ok 41 - renamed text or AVIF is not accepted as video
+  ---
+  duration_ms: 0.265742
+  type: 'test'
+  ...
+# Subtest: store retains only metadata in references and deduplicates content
+ok 42 - store retains only metadata in references and deduplicates content
+  ---
+  duration_ms: 0.95488
+  type: 'test'
+  ...
+# Subtest: LRU eviction enforces memory and reference limits
+ok 43 - LRU eviction enforces memory and reference limits
+  ---
+  duration_ms: 1.44448
+  type: 'test'
+  ...
+# Subtest: store rejects impossible memory limits and oversized blob
+ok 44 - store rejects impossible memory limits and oversized blob
+  ---
+  duration_ms: 0.220899
+  type: 'test'
+  ...
+# (node:878) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: registers only read_video, no /video and no input/@ hook
+ok 45 - registers only read_video, no /video and no input/@ hook
+  ---
+  duration_ms: 20.332669
+  type: 'test'
+  ...
+# Subtest: model events enable/disable only the owned tool
+ok 46 - model events enable/disable only the owned tool
+  ---
+  duration_ms: 6.819504
+  type: 'test'
+  ...
+# Subtest: ordinary read blocks video paths but not normal text files
+ok 47 - ordinary read blocks video paths but not normal text files
+  ---
+  duration_ms: 3.124991
+  type: 'test'
+  ...
+# Subtest: config is reloaded per user turn; invalid config warns without leaking its content
+ok 48 - config is reloaded per user turn; invalid config warns without leaking its content
+  ---
+  duration_ms: 5.231472
+  type: 'test'
+  ...
+# Subtest: kimi-coding: full mocked host flow never fetches, authenticates, or persists base64
+ok 49 - kimi-coding: full mocked host flow never fetches, authenticates, or persists base64
+  ---
+  duration_ms: 11.105556
+  type: 'test'
+  ...
+# Subtest: google: full mocked host flow never fetches, authenticates, or persists base64
+ok 50 - google: full mocked host flow never fetches, authenticates, or persists base64
+  ---
+  duration_ms: 6.4505
+  type: 'test'
+  ...
+# Subtest: tree navigation drops resident bytes and preserves other tools
+ok 51 - tree navigation drops resident bytes and preserves other tools
+  ---
+  duration_ms: 7.408931
+  type: 'test'
+  ...
+# Subtest: source has no upload clients, credential lookup, dynamic execution, or refresh tool argument
+ok 52 - source has no upload clients, credential lookup, dynamic execution, or refresh tool argument
+  ---
+  duration_ms: 7.509997
+  type: 'test'
+  ...
+# Subtest: release defaults to private and targets only the requested repo
+ok 53 - release defaults to private and targets only the requested repo
+  ---
+  duration_ms: 1.905236
+  type: 'test'
+  ...
+# Subtest: release requires explicit opt-in for public visibility
+ok 54 - release requires explicit opt-in for public visibility
+  ---
+  duration_ms: 0.227677
+  type: 'test'
+  ...
+# Subtest: release refuses another logged-in account before any git changes
+ok 55 - release refuses another logged-in account before any git changes
+  ---
+  duration_ms: 0.585683
+  type: 'test'
+  ...
+# Subtest: release refuses an existing repo without overwrite
+ok 56 - release refuses an existing repo without overwrite
+  ---
+  duration_ms: 0.267432
+  type: 'test'
+  ...
+# Subtest: release cannot add files to an ancestor repository
+ok 57 - release cannot add files to an ancestor repository
+  ---
+  duration_ms: 0.16696
+  type: 'test'
+  ...
+# (node:915) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: kimi-coding: read -> authorized context -> inline request; no data persisted
+ok 58 - kimi-coding: read -> authorized context -> inline request; no data persisted
+  ---
+  duration_ms: 37.362018
+  type: 'test'
+  ...
+# Subtest: google: read -> authorized context -> inline request; no data persisted
+ok 59 - google: read -> authorized context -> inline request; no data persisted
+  ---
+  duration_ms: 5.388199
+  type: 'test'
+  ...
+# Subtest: reset/resume cannot silently reread files from persisted session metadata
+ok 60 - reset/resume cannot silently reread files from persisted session metadata
+  ---
+  duration_ms: 3.641272
+  type: 'test'
+  ...
+# Subtest: copying a marker into user text or a different tool result does not authorize it
+ok 61 - copying a marker into user text or a different tool result does not authorize it
+  ---
+  duration_ms: 3.188541
+  type: 'test'
+  ...
+# Subtest: model switch does not leak resident Kimi bytes to Gemini
+ok 62 - model switch does not leak resident Kimi bytes to Gemini
+  ---
+  duration_ms: 9.281828
+  type: 'test'
+  ...
+# Subtest: turning video off after context preparation still blocks request injection
+ok 63 - turning video off after context preparation still blocks request injection
+  ---
+  duration_ms: 4.325376
+  type: 'test'
+  ...
+# Subtest: invalid policy fails closed instead of keeping previous enabled state
+ok 64 - invalid policy fails closed instead of keeping previous enabled state
+  ---
+  duration_ms: 3.585329
+  type: 'test'
+  ...
+# Subtest: external files need explicit approval before encoding
+ok 65 - external files need explicit approval before encoding
+  ---
+  duration_ms: 5.715035
+  type: 'test'
+  ...
+# Subtest: reset during a pending read cancels it without committing resident data
+ok 66 - reset during a pending read cancels it without committing resident data
+  ---
+  duration_ms: 7.130174
+  type: 'test'
+  ...
+# Subtest: model selection cancels a pending read
+ok 67 - model selection cancels a pending read
+  ---
+  duration_ms: 2.580352
+  type: 'test'
+  ...
+# Subtest: parallel tool calls serialize encoding and release the queue after errors
+ok 68 - parallel tool calls serialize encoding and release the queue after errors
+  ---
+  duration_ms: 13.583273
+  type: 'test'
+  ...
+# Subtest: evicted bytes produce explicit unavailable context, never an implicit disk read
+ok 69 - evicted bytes produce explicit unavailable context, never an implicit disk read
+  ---
+  duration_ms: 6.538551
+  type: 'test'
+  ...
+# Subtest: assistant text and attached text signatures are never rewritten
+ok 70 - assistant text and attached text signatures are never rewritten
+  ---
+  duration_ms: 5.250511
+  type: 'test'
+  ...
+# (node:931) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: Kimi inline source is base64, never URL; input and signatures stay unchanged
+ok 71 - Kimi inline source is base64, never URL; input and signatures stay unchanged
+  ---
+  duration_ms: 4.874244
+  type: 'test'
+  ...
+# Subtest: Kimi accepts string tool content and replaces all markers
+ok 72 - Kimi accepts string tool content and replaces all markers
+  ---
+  duration_ms: 0.352735
+  type: 'test'
+  ...
+# Subtest: Kimi rejects unauthorized content: missing
+ok 73 - Kimi rejects unauthorized content: missing
+  ---
+  duration_ms: 0.215505
+  type: 'test'
+  ...
+# Subtest: Kimi rejects unauthorized content: other-tool
+ok 74 - Kimi rejects unauthorized content: other-tool
+  ---
+  duration_ms: 0.246295
+  type: 'test'
+  ...
+# Subtest: Kimi rejects unauthorized content: error
+ok 75 - Kimi rejects unauthorized content: error
+  ---
+  duration_ms: 0.22074
+  type: 'test'
+  ...
+# Subtest: Kimi rejects unauthorized content: wrong-call
+ok 76 - Kimi rejects unauthorized content: wrong-call
+  ---
+  duration_ms: 0.419665
+  type: 'test'
+  ...
+# Subtest: Gemini inlineData follows ALL functionResponses; ids and signatures survive
+ok 77 - Gemini inlineData follows ALL functionResponses; ids and signatures survive
+  ---
+  duration_ms: 0.820448
+  type: 'test'
+  ...
+# Subtest: Gemini supports older id-less calls and normalized IDs
+ok 78 - Gemini supports older id-less calls and normalized IDs
+  ---
+  duration_ms: 0.546632
+  type: 'test'
+  ...
+# Subtest: Gemini unknown/wrong/error function responses cannot attach bytes
+ok 79 - Gemini unknown/wrong/error function responses cannot attach bytes
+  ---
+  duration_ms: 0.810839
+  type: 'test'
+  ...
+# Subtest: kimi-coding: aggregate request budget omits ALL new video without mutation
+ok 80 - kimi-coding: aggregate request budget omits ALL new video without mutation
+  ---
+  duration_ms: 2.0035
+  type: 'test'
+  ...
+# Subtest: kimi-coding: model mismatch prevents injection
+ok 81 - kimi-coding: model mismatch prevents injection
+  ---
+  duration_ms: 0.371457
+  type: 'test'
+  ...
+# Subtest: kimi-coding: rewrite is idempotent
+ok 82 - kimi-coding: rewrite is idempotent
+  ---
+  duration_ms: 0.314972
+  type: 'test'
+  ...
+# Subtest: google: aggregate request budget omits ALL new video without mutation
+ok 83 - google: aggregate request budget omits ALL new video without mutation
+  ---
+  duration_ms: 0.204233
+  type: 'test'
+  ...
+# Subtest: google: model mismatch prevents injection
+ok 84 - google: model mismatch prevents injection
+  ---
+  duration_ms: 0.072322
+  type: 'test'
+  ...
+# Subtest: google: rewrite is idempotent
+ok 85 - google: rewrite is idempotent
+  ---
+  duration_ms: 0.140841
+  type: 'test'
+  ...
+# Subtest: malformed payloads are safely left alone
+ok 86 - malformed payloads are safely left alone
+  ---
+  duration_ms: 0.108408
+  type: 'test'
+  ...
+# Subtest: id-less Gemini response counters never go negative across turns
+ok 87 - id-less Gemini response counters never go negative across turns
+  ---
+  duration_ms: 0.206816
+  type: 'test'
+  ...
+# Subtest: aggregate-size failure gives the model a reason instead of telling it to repeat the same read
+ok 88 - aggregate-size failure gives the model a reason instead of telling it to repeat the same read
+  ---
+  duration_ms: 0.466059
+  type: 'test'
+  ...
+# Subtest: Kimi function result cannot consume the same tool call twice
+ok 89 - Kimi function result cannot consume the same tool call twice
+  ---
+  duration_ms: 0.234654
+  type: 'test'
+  ...
+# Subtest: two individually acceptable videos can exceed the aggregate request budget
+ok 90 - two individually acceptable videos can exceed the aggregate request budget
+  ---
+  duration_ms: 0.638194
+  type: 'test'
+  ...
+1..90
+# tests 90
+# suites 0
+# pass 90
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 470.417582
