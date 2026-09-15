@@ -1,38 +1,38 @@
 # pi-read-video
 
-让 Pi 的当前模型自己调用 `read_video` 看本地视频。**Kimi 和 Gemini 都使用 inline，完全不调用 Files API。**
+Lets Pi's current model call `read_video` to inspect a local video. **Kimi and Gemini use inline input only; the extension never uses a Files API.**
 
 ```text
-@recordings/bug.mp4 看看第 13 秒之后按钮为什么消失，结合项目代码找原因。
+@recordings/bug.mp4 Inspect why the button disappears after 13 seconds, then relate it to the project code.
 ```
 
-没有 `/video` 命令，不拦截 `@`，不调用第二个模型生成视频摘要。配置只用 `video: true`。
+There is no `/video` command, no interception of `@`, and no second model that summarizes video. Configuration uses only `video: true`.
 
-## 安装
+## Installation
 
-推荐通过 npm 安装到 Pi：
+Install into Pi through npm:
 
 ```bash
 pi install npm:pi-read-video
 ```
 
-当前 Pi 会话需要 `/reload`，新会话会自动加载。仍需按下文配置 `video: true`。
+Run `/reload` in the current Pi session; new sessions load it automatically. You must still configure `video: true` as described below.
 
-也可手动解压，把整个 `pi-read-video` 目录放到：
+Alternatively, place the entire `pi-read-video` directory at:
 
 ```text
 ~/.pi/agent/extensions/pi-read-video/
 ```
 
-手动安装入口应为 `~/.pi/agent/extensions/pi-read-video/index.ts`。npm 版不要与手动安装版或旧的 `pi-video` 扩展同时加载，它们都会注册 `read_video`；切换安装方式前请将旧目录移出 extensions。
+The manual-install entry point is `~/.pi/agent/extensions/pi-read-video/index.ts`. Do not load the npm version together with a manual copy or the older `pi-video` extension: each registers `read_video`. Remove the old extension directory before switching installation methods.
 
-在 Pi 中执行 `/reload`。安装使用不需要先运行 `npm install` 或编译：Pi 提供入口使用的宿主模块，并加载 TypeScript 文件。
+Run `/reload` in Pi. Installation does not require `npm install` or compilation: Pi provides the host modules used by the entry point and loads TypeScript files.
 
-本版对齐 `@earendil-works/pi-coding-agent` 0.85.1 的扩展接口。实际运行请满足 Pi 的 Node.js 要求，至少 22.19.0。旧 `@mariozechner/*` 包名、改版宿主尚未验证。
+This version targets the `@earendil-works/pi-coding-agent` 0.85.1 extension API. Runtime requires Node.js 22.19.0 or later. Older `@mariozechner/*` package names and changed host APIs are unverified.
 
-## 配置
+## Configuration
 
-将下面内容**合并到**已有的 `~/.pi/agent/models.json`，不要覆盖其他 provider、模型和认证配置。使用自定义 agent 目录时，插件通过 Pi 的 `getAgentDir()` 获取同一个目录。
+**Merge** the following into your existing `~/.pi/agent/models.json`; do not replace other providers, models, or credentials. With a custom agent directory, the extension uses Pi's `getAgentDir()` and reads that directory's `models.json`.
 
 ```json
 {
@@ -46,88 +46,90 @@ pi install npm:pi-read-video
     },
     "google": {
       "baseUrl": "https://generativelanguage.googleapis.com",
-      "video": true
+      "modelOverrides": {
+        "gemini-3.8-flash": { "video": true }
+      }
     }
   }
 }
 ```
 
-**`video` 是本插件读取的自定义布尔字段，不是 Pi 原生字段。** 不添加 `adapter`、`capabilities` 或 `x-video`；也不要向 Pi 的 `input` 数组添加 `video`。
+`video` is this extension's custom Boolean field, not a native Pi field. Do not add `adapter`, `capabilities`, or `x-video`, and do not add `video` to Pi's `input` array.
 
-优先级：`modelOverrides[id].video` > `models[]` 中对应模型的 `video` > provider 的 `video` > `false`。例如某个 Gemini 模型可以单独设 `false`。`true` 只是允许工具，不会给不支持视频的模型增加能力。
+`video` **must be model-level**: use `modelOverrides[id].video` for an existing model, or `video` on the matching entry in `models[]` for a custom model. Provider-level `video` is rejected so it cannot accidentally enable video for a whole provider. `true` only enables the tool; it does not add video support to an unsupported model.
 
-当前 Pi 对 provider 配置还要求至少有一个它认识的有效设置。因此示例的 Google provider 同时给出了官方 `baseUrl`；不要新建一个只有 `"video": true` 的 provider 对象。已有有效 provider 直接增加 `video` 即可。
+Pi requires a provider configuration to contain at least one setting it recognizes. The Google example therefore includes its official `baseUrl`; do not create a provider that contains only a model video flag.
 
-插件在启动、`/reload` 和每个用户回合开始时重新读取 JSONC。配置损坏时默认禁用，不继续沿用旧的启用状态。模型切换时只调整 `read_video`，不改变其他工具。
+The extension rereads JSONC at startup, `/reload`, and before every user turn. An invalid configuration fails closed rather than retaining an old policy. Model switching changes only `read_video`, never unrelated tools.
 
-## 支持范围
+## Supported routes
 
-| Pi provider / API | 注入的格式 |
+| Pi provider / API | Injected format |
 | --- | --- |
-| `kimi-coding` / `anthropic-messages`，官方 Coding 端点 | `type: "video"`，`source.type: "base64"` |
-| `google` / `google-generative-ai`，官方 Gemini Developer API | `inlineData: { mimeType, data }` |
+| `kimi-coding` / `anthropic-messages`, official Coding endpoint | `type: "video"`, `source.type: "base64"` |
+| `google` / `google-generative-ai`, official Gemini Developer API | `inlineData: { mimeType, data }` |
 
-Kimi 的 video block 是其 Anthropic **兼容端点的扩展**，不代表 Claude API 支持视频。本版没有启用 Vertex、Gemini CLI OAuth、第三方代理或 OpenAI-compatible 路由。即使配置 `video: true`，未实现的路由仍不会启用工具。
+Kimi's video block is an extension of its Anthropic-compatible endpoint; it does not mean that the Claude API accepts video. This version does not enable Vertex, Gemini CLI OAuth, third-party proxies, or OpenAI-compatible routes. Even with `video: true`, an unimplemented route does not enable the tool.
 
-身份认证、HTTP 发送、流式输出和服务端重试都交给 Pi。插件自己不读取 key，不构造上传请求，不保存远端 file ID。
+Pi owns authentication, HTTP transport, streaming, and server retries. The extension never reads a key, constructs an upload request, or persists a remote file ID.
 
-## 工作方式与边界
+## Behavior and boundaries
 
-用户在 **Pi 交互输入框**中用 `@` 选择视频。模型看到路径后，根据任务调用 `read_video({"path":"..."})`。插件验证并读取本地文件，在内存中编码 base64，通过 `before_provider_request` 将真实的工具结果转换为相应协议的视频输入。
+In Pi's **interactive input**, reference a video with `@`. The model sees the path and calls `read_video({"path":"..."})` when the task requires it. The extension validates and reads the local file, base64-encodes it in memory, then converts the genuine tool result into the matching protocol's native video input during `before_provider_request`.
 
-`@` 不会强制调用工具，也不会在用户刚输入路径时自动发送视频。要看画面，需要模型调用 `read_video`。普通 `read` 误读视频时会被阻止，并收到改用 `read_video` 的提示。
+`@` neither forces a tool call nor sends a video as soon as you enter a path. The model must call `read_video` to inspect the picture. An ordinary `read` of a video is blocked and told to use `read_video` instead.
 
-**不要把交互引用和启动参数 `pi @clip.mp4` 混用。** 后者会先经过 Pi 自己的 CLI 文件处理，本插件不接管这个步骤。本版支持先启动 Pi，再在输入框引用视频。
+**Do not confuse an interactive reference with `pi @clip.mp4` at process startup.** The latter first goes through Pi's own CLI file processor, which this extension does not intercept. Start Pi first, then reference the video from the input field.
 
-视频扩展名及容器头检查支持 MP4、MOV、WebM、MKV、AVI、MPEG、FLV、3GP，但不负责验证编解码器、时长或音轨理解能力，最终以 provider 解码结果为准。没有 FFmpeg 依赖，也不自动抽帧、转码或裁剪。
+Extensions and container-header checks support MP4, MOV, WebM, MKV, AVI, MPEG, FLV, and 3GP. The extension does not validate codecs, duration, or audio understanding; the provider ultimately determines decoding behavior. There is no FFmpeg dependency and no automatic frame extraction, transcoding, or clipping.
 
-## 隐私、会话与大小限制
+## Privacy, session behavior, and limits
 
-Inline 仍会将视频内容发送给当前模型服务，只是不经过独立 Files API。不要把它理解为本地推理或零留存承诺。
+Inline input still sends video bytes to the selected model service. It bypasses a separate Files API, but it is not local inference or a zero-retention promise.
 
-会话只保存路径、文件名、MIME、大小、哈希和引用标记；**不保存 base64**。进程内媒体存储按内容去重，有 96 MiB 编码字符串预算和 256 条引用上限。只串行执行文件编码，避免并行工具调用同时分配多个完整文件缓冲区。
+Sessions retain only the path, filename, MIME type, size, hash, and reference marker; they **never retain base64**. Process-local media storage deduplicates content, budgets 96 MiB of encoded strings, and keeps at most 256 references. Encoding is serialized so parallel tool calls do not allocate several full file buffers at once.
 
-`/reload`、恢复会话、分叉、新会话和树导航后，不会从历史路径静默重新读取文件。内存引用不可用时会明确告诉模型，需要再次调用 `read_video`。切换 provider 不会自动把另一 provider 的视频发过去。
+After `/reload`, session restore, fork, a new session, or tree navigation, the extension does not silently reread a historical path. When an in-memory reference is unavailable, the model is explicitly told to call `read_video` again. Switching provider does not automatically send a video to the new provider.
 
-显式调用 `read_video(path)` 即读取该本地视频，不按工作目录内外弹窗确认，非交互模式也可读取上传目录等外部路径。模型可通过此工具读取当前进程有权限访问的视频文件；文件字节仍仅在已启用的受支持模型请求中发送。读取使用同一个文件描述符并核对文件身份及大小，防止检查后文件被替换。视频中的文字是待分析数据，不是新的指令。
+An explicit `read_video(path)` reads that local video without a working-directory confirmation, including an external path in non-interactive mode. A model can read files that the current process can read, but bytes are sent only on requests to an enabled supported model. The same file descriptor is used for validation and reading, with file identity and size checked to prevent replacement after inspection. Text inside a video is untrusted data, not new instructions.
 
-| 路由 | 单文件原始大小预算 | 序列化请求参数预算 |
+| Route | Raw single-file budget | Serialized request-parameter budget |
 | --- | ---: | ---: |
 | Kimi | 35 MiB | 50,000,000 bytes |
 | Gemini | 14 MiB | 20,000,000 bytes |
 
-这些是**本插件的保守客户端预算**，不是 API 硬上限声明。完整请求检查会计入 base64、历史内容和其他请求参数；Google SDK 随后仍会进行自己的 HTTP 序列化。原始文件小于上限并不保证整个请求能装下，也不保证不超过模型 token 上下文。
+These are conservative **client** budgets, not API hard-limit claims. The full-request check includes base64, history, and other request parameters; the Google SDK subsequently serializes its own HTTP request. A file smaller than the limit is not guaranteed to fit the final request or the model context window.
 
-超出预算时，本插件不注入这次的视频，通知用户并在工具结果中说明原因；不会自动上传作为兜底。应缩短上下文或自行裁剪视频。重复引用同一内容在一次请求内只附加一次；不同回合仍可能重复携带 inline 视频并产生相应流量和模型用量。
+When a budget is exceeded, the extension omits that video's injection, notifies the user, and explains the reason in the tool result. It never falls back to uploading. Shorten the context or trim the video yourself. The same content is attached once per request; different turns can still resend inline data and incur traffic and model usage.
 
-本插件不会记录原始请求，但其他调试扩展或 SDK 日志仍可能记录包含视频的请求体。
+The extension does not log raw requests, although other debugging extensions or SDK logs may record a request body that contains video.
 
-## 开发与验证
+## Development and verification
 
 ```bash
-# 离线单元测试与模拟 Pi 宿主测试，无需真实 key，也不发 API 请求
+# Offline unit tests and mocked Pi-host tests; no real key or API request.
 npm test
 
-# 完整的宿主类型检查需要先安装开发依赖
+# Full host type checking requires development dependencies.
 npm install --ignore-scripts
 npm run typecheck
 
-# 真实 Pi Anthropic / Google 序列化链检查；在发送前截断，不发 HTTP
+# Exercise the real Pi Anthropic/Google serialization chain, then stop before HTTP.
 npm run test:pi
 ```
 
-测试使用合成容器头，不冒充真实视频解码或端到端验证。详细结果及未验证项见 [docs/VERIFICATION.md](docs/VERIFICATION.md)。模块职责见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)，接口依据见 [docs/SOURCES.md](docs/SOURCES.md)。
+Tests use synthetic container headers and do not claim real video decoding or end-to-end verification. See [docs/VERIFICATION.md](docs/VERIFICATION.md) for detailed results and open verification work, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for module boundaries, and [docs/SOURCES.md](docs/SOURCES.md) for interface evidence.
 
-## 发布到 GitHub
+## Initial GitHub publication
 
-目标仓库为 `astrosheep-zero/pi-read-video`。下面的脚本仅用于首次创建仓库，仓库已经存在时会拒绝执行。
+The target repository is `astrosheep-zero/pi-read-video`. The script below is only for initial creation and refuses if the repository already exists.
 
-在已安装 GitHub CLI、登录 `astrosheep-zero` 并配置 Git 提交身份的本机执行：
+Run it on a machine with GitHub CLI installed, logged in as `astrosheep-zero`, and with Git commit identity configured:
 
 ```bash
 node scripts/publish.mjs
 ```
 
-脚本先验证账号、运行测试，然后创建并推送 `astrosheep-zero/pi-read-video`，默认私有。只有明确传入 `--public` 才会公开。它不接收 token 参数，不修改已有 origin，不覆盖已存在的仓库，也不向上级 Git 仓库添加文件。
+The script verifies the account, runs tests, then creates and pushes `astrosheep-zero/pi-read-video` privately by default. It becomes public only with an explicit `--public`. It accepts no token parameter, does not alter an existing `origin`, does not overwrite an existing repository, and does not add files to an ancestor repository.
 
-提交前可先检查 `git diff --cached`；需要后续更新时使用正常的 Git 提交与推送流程，而非重复执行首次发布脚本。
+Before committing, inspect `git diff --cached`. For later releases, use ordinary Git commits and pushes rather than rerunning the initial-publication script.

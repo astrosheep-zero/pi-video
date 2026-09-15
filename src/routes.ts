@@ -5,32 +5,28 @@ export const INLINE_LIMITS = Object.freeze({
   kimi: { maxFileBytes: 35 * MiB, maxRequestBytes: 50000000 },
   gemini: { maxFileBytes: 14 * MiB, maxRequestBytes: 20000000 },
 });
-/** An API label alone is not evidence that a server supports a video extension. */
+/** Explicit video policy opts in; API format selects the wire encoder, not provider identity. */
 export function videoRoute(model: ModelIdentity | undefined): VideoRoute | undefined {
   if (!model)
     return undefined;
   let kind: "kimi" | "gemini";
   let defaultBase: string;
-  let paths: string[];
-  if (model.provider === "kimi-coding" && model.api === "anthropic-messages") {
+  if (model.api === "anthropic-messages") {
     kind = "kimi";
     defaultBase = "https://api.kimi.com/coding";
-    paths = ["/coding"];
   }
-  else if (model.provider === "google" && model.api === "google-generative-ai") {
+  else if (model.api === "google-generative-ai") {
     kind = "gemini";
     defaultBase = "https://generativelanguage.googleapis.com";
-    paths = ["", "/v1", "/v1beta"];
   }
   else {
     return undefined;
   }
   try {
     const endpoint = new URL(model.baseUrl ?? defaultBase);
-    const expected = new URL(defaultBase);
     const path = endpoint.pathname.replace(/\/+$/, "");
-    if (endpoint.protocol !== "https:" || endpoint.host !== expected.host ||
-      endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !paths.includes(path)) {
+    if (!["https:", "http:"].includes(endpoint.protocol) ||
+      endpoint.username || endpoint.password || endpoint.search || endpoint.hash) {
       return undefined;
     }
     return {

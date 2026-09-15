@@ -7,7 +7,10 @@ import { videoRoute } from '../src/routes.ts';
 
 export const KIMI = Object.freeze({ provider: 'kimi-coding', id: 'kimi-for-coding', api: 'anthropic-messages', baseUrl: 'https://api.kimi.com/coding' });
 export const GEMINI = Object.freeze({ provider: 'google', id: 'gemini-3-test', api: 'google-generative-ai', baseUrl: 'https://generativelanguage.googleapis.com' });
-export const CONFIG = JSON.stringify({ providers: { 'kimi-coding': { video: true }, google: { video: true } } });
+export const CONFIG = JSON.stringify({ providers: {
+  'kimi-coding': { modelOverrides: { 'kimi-for-coding': { video: true } } },
+  google: { models: [{ id: 'gemini-3-test', video: true }] },
+} });
 // Deliberately only a container-header fixture, NOT a decodable video.
 export const BYTES = Buffer.from([0, 0, 0, 24, ...Buffer.from('ftypisom'), 0, 0, 0, 1, ...Buffer.from('isommp42')]);
 

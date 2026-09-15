@@ -40,7 +40,7 @@ export function registerReadVideo(pi: ExtensionAPI, options: PiBindingOptions): 
     }
     catch {
       if (!warnedAboutConfig)
-        notify(ctx, "pi-read-video 已禁用：models.json 无法读取、JSONC 无效，或 video 不是布尔值。");
+        notify(ctx, "pi-read-video is disabled: models.json cannot be read, JSONC is invalid, or video is not a boolean.");
       warnedAboutConfig = true;
     }
     syncTools(ctx.model);

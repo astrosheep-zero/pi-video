@@ -3,7 +3,6 @@ import { parseJsonc } from "./jsonc.ts";
 import { isRecord, type ModelIdentity } from "./types.ts";
 /** Compiled policy deliberately discards API keys and all unrelated model settings. */
 export class VideoPolicy {
-  private readonly defaults = new Map<string, boolean>();
   private readonly models = new Map<string, boolean>();
   private readonly overrides = new Map<string, boolean>();
   static parse(source: string): VideoPolicy {
@@ -15,7 +14,9 @@ export class VideoPolicy {
     for (const [name, provider] of Object.entries(value.providers ?? {})) {
       if (!isRecord(provider))
         throw new Error(`Invalid provider: ${name}`);
-      policy.setFlag(policy.defaults, name, provider.video);
+      if (provider.video !== undefined) {
+        throw new Error(`${name}.video is not supported; set video on a model or modelOverride`);
+      }
       if (provider.models !== undefined && !Array.isArray(provider.models)) {
         throw new Error(`${name}.models must be an array`);
       }
@@ -43,12 +44,12 @@ export class VideoPolicy {
       throw new Error(`${key}.video must be true or false`);
     target.set(key, value);
   }
-  /** Explicit model override > model definition > provider default > disabled. */
+  /** Explicit model override > model definition > disabled. */
   enabled(model: ModelIdentity | undefined): boolean {
     if (!model)
       return false;
     const key = `${model.provider}/${model.id}`;
-    return this.overrides.get(key) ?? this.models.get(key) ?? this.defaults.get(model.provider) ?? false;
+    return this.overrides.get(key) ?? this.models.get(key) ?? false;
   }
 }
 export async function loadVideoPolicy(path: string): Promise<VideoPolicy> {

@@ -1,53 +1,53 @@
-# 代码与抽象边界
+# Code and abstraction boundaries
 
-## 请求链路
+## Request path
 
 ```text
-Pi 交互 @路径
-  → 模型决定调用 read_video
-  → Pi 绑定层校验参数并桥接取消信号
-  → VideoService 检查策略和路由
-  → media 检查文件并读取一次
-  → VideoStore 保存内存 base64，返回纯元数据引用
-  → Pi 持久化普通文本工具结果与元数据
-  → context 为当前请求核验工具结果来源
-  → before_provider_request 调用纯协议变换
-  → Pi 原有 provider 发送包含 inline 视频的请求
+Pi interactive @path
+  → model decides to call read_video
+  → Pi binding validates parameters and bridges cancellation signals
+  → VideoService checks policy and route
+  → media inspects and reads the file once
+  → VideoStore keeps in-memory base64 and returns a metadata-only reference
+  → Pi persists the ordinary text tool result and metadata
+  → context validates the tool-result provenance for the current request
+  → before_provider_request invokes a pure protocol transform
+  → Pi's existing provider sends the request containing inline video
 ```
 
-## 模块职责
+## Module responsibilities
 
-| 模块 | 负责 | 不负责 |
+| Module | Responsible for | Not responsible for |
 | --- | --- | --- |
-| `index.ts` | 从 Pi 取得宿主模块、Schema、文本渲染器 | 业务逻辑 |
-| `pi-extension.ts` | Pi 事件、工具注册、启停、UI、取消信号桥接 | 编码协议、读认证 |
-| `config.ts` / `jsonc.ts` | 把原始配置编译为布尔策略 | 保存 API key、实现 provider |
-| `routes.ts` | 已实现的 provider/API/官方端点及客户端预算 | 推断未知模型能力 |
-| `service.ts` | 一次读取用例、生命周期、上下文来源校验 | HTTP、具体视频 wire block |
-| `media.ts` / `formats.ts` | 路径、文件身份、受限读取、容器头、base64 | 网络、TUI、转码 |
-| `store.ts` / `references.ts` | 内存内容去重、引用、无字节的持久化表示 | 磁盘缓存、恢复时读文件 |
-| `wire/kimi.ts` | Kimi tool_result 转换为 base64 video block | Gemini、文件 I/O |
-| `wire/gemini.ts` | 保留 functionResponse 分组并追加 inlineData | Kimi、文件 I/O |
-| `wire/index.ts` | 模型一致性检查及总请求预算 | 发送 HTTP 或读取认证 |
+| `index.ts` | Obtaining Pi host modules, schema, and text renderer | Business logic |
+| `pi-extension.ts` | Pi events, tool registration, enablement, UI, cancellation-signal bridging | Wire encoding or read authorization |
+| `config.ts` / `jsonc.ts` | Compiling raw configuration into a Boolean policy | Storing API keys or implementing providers |
+| `routes.ts` | Implemented provider/API routes and client budgets | Guessing unknown model capability |
+| `service.ts` | One-read use case, lifecycle, context-provenance validation | HTTP or concrete video wire blocks |
+| `media.ts` / `formats.ts` | Paths, file identity, bounded reads, container headers, base64 | Networking, TUI, transcoding |
+| `store.ts` / `references.ts` | In-memory content deduplication, references, byte-free persistent representation | Disk cache or rereading files after restoration |
+| `wire/kimi.ts` | Converts a Kimi `tool_result` into a base64 video block | Gemini or file I/O |
+| `wire/gemini.ts` | Preserves `functionResponse` grouping and appends `inlineData` | Kimi or file I/O |
+| `wire/index.ts` | Model-consistency checks and aggregate request budget | HTTP sending or credential reads |
 
-没有将 provider 差异泛化成用户必须配置的 adapter 框架。只有两个小型、独立、可测试的协议变换函数。新增协议必须同时具备明确路由、转换实现和测试，不能只添加一个模型名字。
+Provider differences are intentionally not generalized into an adapter framework users must configure. There are only two small, isolated, testable protocol transforms. A new protocol needs an explicit route, a transform implementation, and tests; adding only a model name is insufficient.
 
-## 数据生命周期与可信边界
+## Data lifecycle and trust boundary
 
-`VideoReference` 只包含元数据，是唯一允许进入工具 `details.readVideo` 的类型。`InlineVideo` 带 base64，留在 `VideoStore`，只在发送前生成请求副本。没有 `any` 或把视频伪装为 `ImageContent` 的类型转换。
+`VideoReference` contains metadata only and is the sole type allowed in tool `details.readVideo`. `InlineVideo` contains base64, stays in `VideoStore`, and is used only to make a request copy immediately before sending. There are no `any` casts or conversions that disguise video as `ImageContent`.
 
-`context` 只为当前消息中的成功 `read_video` 工具结果建立可注入标记，核对 call ID 与本进程生成的引用。用户输入、普通 read 结果、伪造 details、错误结果都不能触发注入。**助手消息不改写**，避免破坏签名重放。
+`context` authorizes injectable markers only for successful `read_video` results in the current message. It checks the call ID and a process-generated reference. User input, ordinary `read` results, forged details, and error results cannot trigger injection. **Assistant messages are never rewritten**, preventing signature-replay damage.
 
-原始会话 call ID 只用于 context 层来源核验。`ResolveVideo` 只返回本次 context 已授权、路由匹配且仍在内存中的 marker。协议层不读取引用中的原始 call ID，也不实现 Pi 的 ID 归一化规则：它仅使用 Pi 已序列化的 ID 配对 call/response；旧版 Gemini 无 ID 时按已出现的 read_video 调用计数消费。协议编码器必须与此授权 resolver 一起使用，不能直接用未校验的全局缓存查询替代。
+The original session call ID is used only by the context layer to validate provenance. `ResolveVideo` returns only markers authorized in the current context, matching the route, and still resident in memory. Protocol code neither reads the reference's original call ID nor implements Pi's ID-normalization rules. It uses only Pi-serialized call/response pairs; older id-less Gemini calls consume by the count of already seen `read_video` calls. Protocol encoders must use this authorization resolver rather than querying an unvalidated global cache.
 
-Kimi 转换器还要求前面确实存在对应的 `tool_use`，将 video 放进该调用的 `tool_result.content`。Gemini 转换器核对 function call/response 对应关系，不改 ID、不改 thought signature、不拆散并行 functionResponse 组，将媒体放进紧随其后的 user Content，而不是塞进 JSON output 字符串。
+The Kimi transform additionally requires the corresponding preceding `tool_use` and places video in that call's `tool_result.content`. The Gemini transform verifies function-call/function-response correspondence, preserves IDs and thought signatures, does not split parallel `functionResponse` groups, and adds media in the immediately following user Content rather than inside a JSON output string.
 
-所有变换都返回副本，不把实际视频块写回 Pi 会话。即使配置在 context 检查后被关闭，请求层仍会重新检查启用状态。标记本身不是文件读取授权，重启后不会据此自动读盘。
+Every transform returns a copy and never writes a real video block back to Pi's session. Even if configuration is disabled after context validation, the request layer checks enablement again. A marker alone does not authorize file reading after restart.
 
-## 有意保留的限制
+## Intentional limitations
 
-文件读取前会检查单文件预算；请求重写后再检查包含全部上下文的序列化参数预算。超出后明确退化为“视频未提供”，绝不偷偷转为 Files API。日志或其他扩展在本插件之后再次改变请求的情况不由本插件控制。
+A raw-file budget is checked before reading, and a serialized-parameter budget is checked after request rewriting with all context included. On overflow, the behavior explicitly degrades to “video not provided”; it never silently switches to a Files API. Request mutations made by other extensions after this extension are outside its control.
 
-文件编码排队，进程存储有上限，但总 RSS 还包括 Pi 自身、临时 Buffer、SDK 参数和序列化副本。96 MiB 是缓存中编码字符串的计数预算，不是整个进程的内存承诺。
+File encoding is queued and process storage is bounded, but total RSS also includes Pi itself, temporary Buffers, SDK parameters, and serialization copies. The 96 MiB cache figure measures encoded strings, not a total-process memory guarantee.
 
-同一 provider/端点内切换到另一个已启用视频的模型可以重用仍在内存中的内容；跨 provider/API/端点不重用。被清除或淘汰的引用需要模型再次调用工具。这是明确的内存生命周期选择，不实现自动恢复视频或隐式跨服务发送。
+Switching to a different video-enabled model on the same provider/endpoint can reuse resident content. Content is not reused across provider, API, or endpoint boundaries. Cleared or evicted references require the model to call the tool again. This is an explicit memory-lifecycle choice; the extension does not automatically restore videos or silently send them across services.

@@ -1,16 +1,40 @@
 {
   "name": "pi-read-video",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Model-driven inline video reading for Pi: Kimi Coding and Gemini.",
   "type": "module",
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/astrosheep-zero/pi-read-video.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/astrosheep-zero/pi-read-video.git"
+  },
   "homepage": "https://github.com/astrosheep-zero/pi-read-video#readme",
-  "bugs": { "url": "https://github.com/astrosheep-zero/pi-read-video/issues" },
-  "engines": { "node": ">=22.19.0" },
-  "keywords": ["pi-package", "pi-extension", "video", "kimi", "gemini"],
-  "pi": { "extensions": ["./index.ts"] },
-  "files": ["index.ts", "src", "README.md", "docs", "examples", "LICENSE"],
+  "bugs": {
+    "url": "https://github.com/astrosheep-zero/pi-read-video/issues"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "video",
+    "kimi",
+    "gemini"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "files": [
+    "index.ts",
+    "src",
+    "README.md",
+    "docs",
+    "examples",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "node --experimental-strip-types --test test/*.test.mjs",
     "test:pi": "node --experimental-strip-types --test scripts/verify-pi-serializer.mjs",
@@ -25,9 +49,15 @@
     "typebox": "*"
   },
   "peerDependenciesMeta": {
-    "@earendil-works/pi-coding-agent": { "optional": true },
-    "@earendil-works/pi-tui": { "optional": true },
-    "typebox": { "optional": true }
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
+    "@earendil-works/pi-tui": {
+      "optional": true
+    },
+    "typebox": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "0.85.1",
