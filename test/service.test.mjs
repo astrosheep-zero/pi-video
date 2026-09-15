@@ -29,8 +29,15 @@ test('reset/resume cannot silently reread files from persisted session metadata'
   const result = await service.read(ws.path, 'call_1', { cwd: ws.cwd, model: GEMINI });
   service.reset(); await rm(ws.path);
   const context = service.prepareContext([message(result)], GEMINI);
-  assert.match(context[0].content[0].text, /NOT provided/);
+  assert.match(context[0].content[0].text, /video bytes are no longer resident/);
   assert.equal(service.rewrite(geminiPayload(result.details.readVideo), GEMINI).videos, 0);
+});
+test('unavailable context identifies missing model and disabled video policy', async (t) => {
+  const ws = await workspace(t); const service = new VideoService(); service.configure(CONFIG);
+  const result = await service.read(ws.path, 'call_1', { cwd: ws.cwd, model: KIMI });
+  assert.match(service.prepareContext([message(result)], undefined)[0].content[0].text, /no model is selected/);
+  service.configure('{}');
+  assert.match(service.prepareContext([message(result)], KIMI)[0].content[0].text, /video is disabled for kimi-coding\/kimi-for-coding/);
 });
 test('copying a marker into user text or a different tool result does not authorize it', async (t) => {
   const ws = await workspace(t); const service = new VideoService(); service.configure(CONFIG);
@@ -38,7 +45,7 @@ test('copying a marker into user text or a different tool result does not author
   for (const msg of [message(result, { role: 'user' }), message(result, { toolName: 'read' }),
     message(result, { toolCallId: 'forged' }), message(result, { isError: true })]) {
     const context = service.prepareContext([msg], KIMI);
-    assert.match(context[0].content[0].text, /NOT provided/);
+    assert.match(context[0].content[0].text, /not a genuine successful read_video tool result/);
     assert.equal(service.rewrite(kimiPayload(result.details.readVideo), KIMI).videos, 0);
   }
 });
@@ -129,7 +136,7 @@ test('evicted bytes produce explicit unavailable context, never an implicit disk
   const ws = await workspace(t); const service = new VideoService({ store: new VideoStore(1000, 1) }); service.configure(CONFIG);
   const old = await service.read(ws.path, 'call_1', { cwd: ws.cwd, model: KIMI });
   await service.read(ws.path, 'call_2', { cwd: ws.cwd, model: KIMI });
-  assert.match(service.prepareContext([message(old)], KIMI)[0].content[0].text, /NOT provided/);
+  assert.match(service.prepareContext([message(old)], KIMI)[0].content[0].text, /video bytes are no longer resident/);
 });
 
 test('assistant text and attached text signatures are never rewritten', async (t) => {

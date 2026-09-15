@@ -97,6 +97,17 @@ export class VideoService {
       this.running.delete(controller);
     }
   }
+  private unavailableReason(model: ModelIdentity | undefined, route: VideoRoute | undefined, ref: VideoReference | undefined): string {
+    if (!model)
+      return "no model is selected for this request; select the model and call read_video again";
+    if (!this.policy.enabled(model))
+      return `video is disabled for ${model.provider}/${model.id}; set video: true on that model or modelOverride, then call read_video again`;
+    if (!route)
+      return `inline video is not implemented for ${model.provider}/${model.id} (${model.api}); select a supported route and call read_video again`;
+    if (!ref)
+      return "this is not a genuine successful read_video tool result, so its video marker is not authorized";
+    return "the video bytes are no longer resident in this process (reload, restore, tree navigation, model/provider switch, or memory eviction can cause this); call read_video again";
+  }
   /** Re-establish provenance for each request from genuine tool results, never user text. */
   prepareContext<T extends ContextMessage>(messages: readonly T[], model: ModelIdentity | undefined): T[] {
     const route = this.route(model);
@@ -111,7 +122,7 @@ export class VideoService {
       if (valid)
         this.authorized.add(ref.marker);
       return mapMessageText(message, (text) => hasMarker(text)
-        ? text.replace(markerPattern(), (marker) => valid && marker === ref.marker ? marker : unavailable(ref, !route ? "video input is disabled or not implemented for this model" : "bytes are no longer resident, or this is not the original read_video result; call read_video again"))
+        ? text.replace(markerPattern(), (marker) => valid && marker === ref?.marker ? marker : unavailable(ref, this.unavailableReason(model, route, ref)))
         : text);
     });
   }
