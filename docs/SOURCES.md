@@ -16,6 +16,15 @@ Checked on 2026-09-09. These sources establish interface shapes; they are not pr
 
 ## Kimi
 
+Alignment baseline: `MoonshotAI/kimi-code` commit `21406fb4c805cc8c715e6d1f16ad3fb5f25f4fe3` (2026-09-30).
+
+- [Files upload and `ms://id`](https://github.com/MoonshotAI/kimi-code/blob/21406fb4c805cc8c715e6d1f16ad3fb5f25f4fe3/packages/agent-core-v2/src/human/llm-kimi/files.ts#L42-L94).
+- [Upload-first tool and auth-error handling](https://github.com/MoonshotAI/kimi-code/blob/21406fb4c805cc8c715e6d1f16ad3fb5f25f4fe3/packages/agent-core-v2/src/agent/tools/read-media-file/readMediaFileTool.ts#L177-L224).
+- [100 MiB input budget](https://github.com/MoonshotAI/kimi-code/blob/21406fb4c805cc8c715e6d1f16ad3fb5f25f4fe3/packages/agent-core-v2/src/agent/tools/read-media-file/read-media-file.ts#L6-L7).
+- [Container list](https://github.com/MoonshotAI/kimi-code/blob/21406fb4c805cc8c715e6d1f16ad3fb5f25f4fe3/packages/agent-core-v2/src/agent/media/mediaRef.ts#L23-L37) and [Anthropic URL/base64 conversion](https://github.com/MoonshotAI/kimi-code/blob/21406fb4c805cc8c715e6d1f16ad3fb5f25f4fe3/packages/agent-core-v2/src/human/llm/requester/bases/anthropic/lower.ts#L10-L72).
+
+The extension retains stricter container-header checks and bounded inline fallback. It aligns Kimi’s upload/Anthropic-wire path, not every CLI protocol or its automatic capability discovery.
+
 - [Anthropic protocol lowering](https://github.com/MoonshotAI/kimi-code/blob/main/packages/agent-core-v2/src/human/llm/requester/bases/anthropic/lower.ts): `video`, `source.type = base64`, `media_type`, and `data`; video can appear inside tool results.
 - [Inline-video construction](https://github.com/MoonshotAI/kimi-code/blob/main/packages/agent-core-v2/src/agent/media/videoUpload.ts): local video data URLs and protocol selection.
 - [Official Hermes integration documentation](https://www.kimi.com/code/docs/third-party-tools/hermes.html): direct base64 video sending; roughly 50 MB is a Hermes client limit, not an API-limit claim.

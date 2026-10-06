@@ -1,5 +1,6 @@
 import type { ModelIdentity, VideoRoute } from "./types.ts";
 const MiB = 1024 ** 2;
+export const KIMI_UPLOAD_MAX_BYTES = 100 * MiB;
 /** These are conservative CLIENT budgets, not claims about server hard limits. */
 export const INLINE_LIMITS = Object.freeze({
   kimi: { maxFileBytes: 35 * MiB, maxRequestBytes: 50000000 },

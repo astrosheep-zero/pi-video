@@ -20,6 +20,6 @@ export function rewriteRequest(payload: unknown, route: VideoRoute, modelId: str
   }
   if (size <= route.maxRequestBytes)
     return result;
-  const fallback = rewrite(payload, () => undefined, "inline request exceeds the client byte budget; shorten the context or trim the video before retrying");
-  return { ...fallback, warning: `Inline request exceeds the client budget (${size} > ${route.maxRequestBytes} bytes). No video was attached. Start a shorter context or trim the video. Files API fallback is disabled.` };
+  const fallback = rewrite(payload, () => undefined, "request exceeds the client byte budget; shorten the context or trim the video before retrying");
+  return { ...fallback, warning: `Video request exceeds the client budget (${size} > ${route.maxRequestBytes} bytes). No video was attached. Start a shorter context or trim the video.` };
 }

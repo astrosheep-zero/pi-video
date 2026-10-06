@@ -44,7 +44,8 @@ export function rewriteGemini(payload: unknown, resolve: ResolveVideo, reason?: 
       if (!hasMarker(response.response.output))
         return part;
       const output = response.response.output.replace(markerPattern(), (marker) => {
-        const video = hasCall && response.response && !("error" in (response.response as RecordValue)) ? resolve(marker) : undefined;
+        const resolved = hasCall && response.response && !("error" in (response.response as RecordValue)) ? resolve(marker) : undefined;
+        const video = resolved && "data" in resolved ? resolved : undefined;
         // resolve authorizes the marker in context; response.id belongs to Pi's wire format.
         if (!video) {
           omitted++;

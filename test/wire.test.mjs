@@ -6,6 +6,29 @@ import { rewriteRequest } from '../src/wire/index.ts';
 import { videoRoute } from '../src/routes.ts';
 import { KIMI, GEMINI, inline, kimiPayload, geminiPayload, resolveOne, containsBytes } from './helpers.mjs';
 
+test('Kimi uploaded references use source.url, retain cache controls and never expose upload scope', () => {
+  const { data, reference } = inline();
+  const video = { reference, url: 'ms://file-private', uploadScope: 'credential-hash' };
+  const payload = kimiPayload(reference); const snapshot = structuredClone(payload);
+  const rewritten = rewriteKimi(payload, resolveOne(video));
+  assert.deepEqual(rewritten.payload.messages[1].content[0].content[1], {
+    type: 'video', source: { type: 'url', url: 'ms://file-private' },
+  });
+  assert.deepEqual(rewritten.payload.messages[1].content[0].content.at(-1).cache_control, { type: 'ephemeral' });
+  assert.ok(!JSON.stringify(rewritten).includes('credential-hash'));
+  assert.ok(!JSON.stringify(rewritten).includes(data));
+  assert.deepEqual(payload, snapshot);
+  payload.messages[1].content[0].content = `${reference.marker} ${reference.marker}`;
+  assert.equal(rewriteKimi(payload, resolveOne(video)).videos, 1);
+});
+test('Gemini never serializes a Moonshot uploaded reference', () => {
+  const { reference } = inline(GEMINI);
+  const video = { reference, url: 'ms://file-private', uploadScope: 'credential-hash' };
+  const result = rewriteGemini(geminiPayload(reference), resolveOne(video));
+  assert.equal(result.videos, 0); assert.equal(result.omitted, 1);
+  assert.ok(!JSON.stringify(result).includes('ms://'));
+});
+
 test('Kimi inline source is base64, never URL; input and signatures stay unchanged', () => {
   const video = inline(); const original = kimiPayload(video.reference); const snapshot = structuredClone(original);
   const result = rewriteKimi(original, resolveOne(video));

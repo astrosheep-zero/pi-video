@@ -3,7 +3,7 @@ import { constants, type Stats } from "node:fs";
 import { open, realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, extname, resolve } from "node:path";
-import { VIDEO_MIME, detectVideoMime } from "./formats.ts";
+import { KIMI_VIDEO_MIME, VIDEO_MIME, detectVideoMime } from "./formats.ts";
 export interface InspectedVideo {
   readonly path: string;
   readonly filename: string;
@@ -16,6 +16,9 @@ export interface EncodedVideo {
   readonly mimeType: string;
   readonly sha256: string;
   readonly data: string;
+}
+export interface LoadedVideo extends Omit<EncodedVideo, "data"> {
+  readonly bytes: Buffer;
 }
 export function cleanVideoPath(raw: string): string {
   if (typeof raw !== "string" || !raw.trim() || raw.includes("\0")) {
@@ -35,13 +38,13 @@ export function cleanVideoPath(raw: string): string {
 }
 export function isVideoPath(path: string): boolean {
   try {
-    return VIDEO_MIME[extname(cleanVideoPath(path)).toLowerCase()] !== undefined;
+    return KIMI_VIDEO_MIME[extname(cleanVideoPath(path)).toLowerCase()] !== undefined;
   }
   catch {
     return false;
   }
 }
-export async function inspectVideo(raw: string, cwd: string, maxBytes: number, signal?: AbortSignal): Promise<InspectedVideo> {
+export async function inspectVideo(raw: string, cwd: string, maxBytes: number, signal?: AbortSignal, uploadFormats = false): Promise<InspectedVideo> {
   signal?.throwIfAborted();
   const path = await realpath(resolve(cwd, cleanVideoPath(raw)));
   const snapshot = await stat(path);
@@ -50,8 +53,8 @@ export async function inspectVideo(raw: string, cwd: string, maxBytes: number, s
   if (snapshot.size === 0)
     throw new Error("Video file is empty");
   if (snapshot.size > maxBytes)
-    throw new Error(`Video exceeds the inline client limit: ${snapshot.size} > ${maxBytes} bytes. Trim or compress it; there is no upload fallback.`);
-  if (!VIDEO_MIME[extname(path).toLowerCase()])
+    throw new Error(`Video exceeds the client file limit: ${snapshot.size} > ${maxBytes} bytes. Trim or compress it before retrying.`);
+  if (!(uploadFormats ? KIMI_VIDEO_MIME : VIDEO_MIME)[extname(path).toLowerCase()])
     throw new Error("Unsupported video extension");
   signal?.throwIfAborted();
   return { path, filename: basename(path), snapshot };
@@ -61,7 +64,7 @@ function unchanged(a: Stats, b: Stats): boolean {
     a.mtimeMs === b.mtimeMs && a.ctimeMs === b.ctimeMs;
 }
 /** One bounded read through one descriptor; hash and base64 refer to the SAME bytes. */
-export async function encodeVideo(video: InspectedVideo, signal?: AbortSignal): Promise<EncodedVideo> {
+export async function loadVideo(video: InspectedVideo, signal?: AbortSignal, uploadFormats = false): Promise<LoadedVideo> {
   signal?.throwIfAborted();
   const flags = constants.O_RDONLY | (process.platform === "win32" ? 0 : constants.O_NOFOLLOW | constants.O_NONBLOCK);
   const file = await open(video.path, flags);
@@ -80,11 +83,15 @@ export async function encodeVideo(video: InspectedVideo, signal?: AbortSignal): 
     if (!unchanged(video.snapshot, await file.stat()))
       throw new Error("Video changed while reading; call read_video again");
     signal?.throwIfAborted();
-    const mimeType = detectVideoMime(extname(video.path), bytes.subarray(0, 4096));
+    const mimeType = detectVideoMime(extname(video.path), bytes.subarray(0, 4096), uploadFormats);
     return { path: video.path, filename: video.filename, size: bytes.length, mimeType,
-      sha256: createHash("sha256").update(bytes).digest("hex"), data: bytes.toString("base64") };
+      sha256: createHash("sha256").update(bytes).digest("hex"), bytes };
   }
   finally {
     await file.close();
   }
+}
+export async function encodeVideo(video: InspectedVideo, signal?: AbortSignal): Promise<EncodedVideo> {
+  const { bytes, ...metadata } = await loadVideo(video, signal);
+  return { ...metadata, data: bytes.toString("base64") };
 }
