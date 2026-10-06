@@ -10,6 +10,7 @@ import { KIMI, GEMINI, CONFIG, workspace, message } from '../test/helpers.mjs';
 
 for (const scenario of [
   { model: KIMI, nextId: 'k3', stream: anthropicStream, hasIds: true },
+  { model: KIMI, nextId: 'k3', stream: anthropicStream, hasIds: true, upload: true },
   { model: { ...GEMINI, id: 'gemini-3-flash-preview' }, nextId: 'gemini-3-pro-preview', stream: googleStream, hasIds: true },
   { model: { ...GEMINI, id: 'gemini-2.5-flash' }, nextId: 'gemini-2.5-pro', stream: googleStream, hasIds: false },
 ]) {
@@ -17,10 +18,14 @@ for (const scenario of [
     contextWindow: 128000, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } };
   for (const switched of [false, true]) {
     for (const id of ['toolu_01AbC', 'call:1', 'x'.repeat(80)]) {
-      test(`real Pi ${origin.id}: switched=${switched}, id=${id.slice(0, 20)}`, async (t) => {
+      test(`real Pi ${origin.id}: upload=${!!scenario.upload}, switched=${switched}, id=${id.slice(0, 20)}`, async (t) => {
         const ws = await workspace(t);
-        const service = new VideoService(); service.configure(CONFIG); service.selectModel(origin);
-        const result = await service.read(ws.path, id, { cwd: ws.cwd, model: origin });
+        const config = JSON.parse(CONFIG);
+        const provider = config.providers[origin.provider];
+        provider.modelOverrides = { ...provider.modelOverrides, [origin.id]: { video: true }, [scenario.nextId]: { video: true } };
+        const service = new VideoService(); service.configure(JSON.stringify(config)); service.selectModel(origin);
+        const upload = scenario.upload ? { scope: 'offline-account', upload: async () => 'ms://file-pi-serializer' } : undefined;
+        const result = await service.read(ws.path, id, { cwd: ws.cwd, model: origin, upload });
         const target = switched ? { ...origin, id: scenario.nextId } : origin;
         service.selectModel(target);
         const assistant = { role: 'assistant', provider: origin.provider, api: origin.api, model: origin.id,
@@ -52,9 +57,10 @@ for (const scenario of [
           assert.equal(parts.find((p) => p.functionResponse).functionResponse.id, expectedId);
         }
         const snapshot = structuredClone(payload);
-        const rewritten = service.rewrite(payload, target);
+        const rewritten = service.rewrite(payload, target, upload?.scope);
         assert.equal(rewritten.videos, 1);
         assert.equal(rewritten.omitted, 0);
+        assert.equal(JSON.stringify(rewritten.payload).includes('ms://file-pi-serializer'), !!scenario.upload);
         assert.deepEqual(payload, snapshot);
         assert.deepEqual(source, sourceSnapshot);
         const key = origin.provider === KIMI.provider ? 'messages' : 'contents';

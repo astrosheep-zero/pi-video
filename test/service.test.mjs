@@ -4,7 +4,9 @@ import { writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { VideoService } from '../src/service.ts';
 import { VideoStore } from '../src/store.ts';
-import { encodeVideo } from '../src/media.ts';
+import { encodeVideo, loadVideo } from '../src/media.ts';
+import { KimiUploadError } from '../src/kimi-files.ts';
+import { KIMI_UPLOAD_MAX_BYTES } from '../src/routes.ts';
 import { CONFIG, KIMI, GEMINI, BYTES, workspace, message, kimiPayload, geminiPayload, containsBytes } from './helpers.mjs';
 
 for (const model of [KIMI, GEMINI]) {
@@ -29,7 +31,7 @@ test('reset/resume cannot silently reread files from persisted session metadata'
   const result = await service.read(ws.path, 'call_1', { cwd: ws.cwd, model: GEMINI });
   service.reset(); await rm(ws.path);
   const context = service.prepareContext([message(result)], GEMINI);
-  assert.match(context[0].content[0].text, /video bytes are no longer resident/);
+  assert.match(context[0].content[0].text, /no longer resident/);
   assert.equal(service.rewrite(geminiPayload(result.details.readVideo), GEMINI).videos, 0);
 });
 test('unavailable context identifies missing model and disabled video policy', async (t) => {
@@ -136,7 +138,7 @@ test('evicted bytes produce explicit unavailable context, never an implicit disk
   const ws = await workspace(t); const service = new VideoService({ store: new VideoStore(1000, 1) }); service.configure(CONFIG);
   const old = await service.read(ws.path, 'call_1', { cwd: ws.cwd, model: KIMI });
   await service.read(ws.path, 'call_2', { cwd: ws.cwd, model: KIMI });
-  assert.match(service.prepareContext([message(old)], KIMI)[0].content[0].text, /video bytes are no longer resident/);
+  assert.match(service.prepareContext([message(old)], KIMI)[0].content[0].text, /no longer resident/);
 });
 
 test('assistant text and attached text signatures are never rewritten', async (t) => {
@@ -146,4 +148,79 @@ test('assistant text and attached text signatures are never rewritten', async (t
   const output = service.prepareContext([assistant], GEMINI);
   assert.strictEqual(output[0], assistant);
   assert.equal(service.rewrite(geminiPayload(result.details.readVideo), GEMINI).videos, 0);
+});
+
+test('Kimi Files stores only the reference and reuses uploads within the same account', async (t) => {
+  const ws = await workspace(t); let uploads = 0;
+  const store = new VideoStore(1000);
+  const service = new VideoService({ store }); service.configure(CONFIG);
+  const upload = { scope: 'account-a', upload: async (video) => {
+    uploads++; assert.deepEqual(video.bytes, BYTES); return 'ms://file-one';
+  } };
+  const results = await Promise.all(['call_1', 'call_2'].map((id) => service.read(ws.path, id, { cwd: ws.cwd, model: KIMI, upload })));
+  assert.equal(uploads, 1);
+  assert.ok(!JSON.stringify(results).includes('ms://'));
+  assert.ok(!JSON.stringify(results).includes('account-a'));
+  assert.equal(containsBytes(results), false);
+  service.prepareContext([message(results[0])], KIMI);
+  const request = service.rewrite(kimiPayload(results[0].details.readVideo), KIMI, upload.scope);
+  assert.equal(request.videos, 1); assert.equal(containsBytes(request), false);
+  assert.ok(JSON.stringify(request).includes('ms://file-one'));
+  assert.equal(service.rewrite(kimiPayload(results[0].details.readVideo), KIMI).videos, 0);
+  assert.equal(service.rewrite(kimiPayload(results[0].details.readVideo), KIMI, 'account-b').videos, 0);
+  await service.read(ws.path, 'call_3', { cwd: ws.cwd, model: KIMI, upload: { ...upload, scope: 'account-b' } });
+  assert.equal(uploads, 2);
+  service.reset(); assert.equal(store.size, 0);
+});
+test('100 MiB upload route does not allocate base64 or hit the inline memory budget', async (t) => {
+  const ws = await workspace(t); let limit;
+  const service = new VideoService({
+    store: new VideoStore(1000),
+    inspect: async (_path, _cwd, maxBytes) => { limit = maxBytes; return {}; },
+    load: async () => ({ path: ws.path, filename: 'clip.mp4', mimeType: 'video/mp4', size: KIMI_UPLOAD_MAX_BYTES,
+      sha256: 'a'.repeat(64), bytes: BYTES }),
+    encode: async () => { throw new Error('unexpected inline encoding'); },
+  }); service.configure(CONFIG);
+  const result = await service.read(ws.path, 'call_1', { cwd: ws.cwd, model: KIMI,
+    upload: { scope: 'account', upload: async () => 'ms://file-large' } });
+  assert.equal(limit, KIMI_UPLOAD_MAX_BYTES); assert.equal(result.details.readVideo.size, KIMI_UPLOAD_MAX_BYTES);
+});
+test('non-auth upload failures use bounded inline fallback and tell the model', async (t) => {
+  const ws = await workspace(t); const service = new VideoService(); service.configure(CONFIG);
+  const result = await service.read(ws.path, 'call_1', { cwd: ws.cwd, model: KIMI,
+    upload: { scope: 'account', upload: async () => { throw new KimiUploadError('failure', 500); } } });
+  assert.match(result.content[0].text, /using inline fallback/);
+  service.prepareContext([message(result)], KIMI);
+  assert.equal(containsBytes(service.rewrite(kimiPayload(result.details.readVideo), KIMI)), true);
+});
+test('auth failures never fall back or retain a video', async (t) => {
+  const ws = await workspace(t);
+  for (const status of [401, 403]) {
+    const store = new VideoStore(); const service = new VideoService({ store }); service.configure(CONFIG);
+    await assert.rejects(service.read(ws.path, 'call_1', { cwd: ws.cwd, model: KIMI,
+      upload: { scope: 'account', upload: async () => { throw new KimiUploadError('auth failed', status); } } }), /auth failed/);
+    assert.equal(store.size, 0);
+  }
+});
+test('inline fallback rejects oversized files and upload-only MIME types', async (t) => {
+  const ws = await workspace(t);
+  for (const changes of [{ size: 35 * 1024 ** 2 + 1 }, { mimeType: 'video/x-ms-wmv' }]) {
+    const service = new VideoService({ load: async (...args) => ({ ...await loadVideo(...args), ...changes }) });
+    service.configure(CONFIG);
+    await assert.rejects(service.read(ws.path, 'call_1', { cwd: ws.cwd, model: KIMI,
+      upload: { scope: 'account', upload: async () => { throw new KimiUploadError('failure', 500); } } }), /cannot fall back inline/);
+  }
+});
+test('reset and model switch abort an upload without retaining its eventual result', async (t) => {
+  const ws = await workspace(t);
+  for (const cancel of [(s) => s.reset(), (s) => s.selectModel(GEMINI)]) {
+    const store = new VideoStore(); const service = new VideoService({ store }); service.configure(CONFIG); service.selectModel(KIMI);
+    let began, finish;
+    const started = new Promise((r) => { began = r; });
+    const read = service.read(ws.path, 'call_1', { cwd: ws.cwd, model: KIMI, upload: { scope: 'account', upload: async () => {
+      began(); return new Promise((r) => { finish = r; });
+    } } });
+    await started; cancel(service); finish('ms://late');
+    await assert.rejects(read); assert.equal(store.size, 0);
+  }
 });

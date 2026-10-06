@@ -8,11 +8,12 @@ Pi interactive @path
   → Pi binding validates parameters and bridges cancellation signals
   → VideoService checks policy and route
   → media inspects and reads the file once
-  → VideoStore keeps in-memory base64 and returns a metadata-only reference
+  → Kimi uploads original bytes through Files; Gemini encodes inline
+  → VideoStore keeps an in-memory file URL or base64 and returns metadata only
   → Pi persists the ordinary text tool result and metadata
   → context validates the tool-result provenance for the current request
-  → before_provider_request invokes a pure protocol transform
-  → Pi's existing provider sends the request containing inline video
+  → before_provider_request rechecks upload credentials, then invokes a pure protocol transform
+  → Pi's existing provider sends the request containing a Kimi video URL or inline video
 ```
 
 ## Module responsibilities
@@ -20,13 +21,14 @@ Pi interactive @path
 | Module | Responsible for | Not responsible for |
 | --- | --- | --- |
 | `index.ts` | Obtaining Pi host modules, schema, and text renderer | Business logic |
-| `pi-extension.ts` | Pi events, tool registration, enablement, UI, cancellation-signal bridging | Wire encoding or read authorization |
+| `pi-extension.ts` | Pi events, tool registration, enablement, UI, cancellation-signal bridging, Pi auth resolution | Wire encoding or read authorization |
+| `kimi-files.ts` | Multipart upload, endpoint/auth scoping, sanitized errors | Session persistence or model requests |
 | `config.ts` / `jsonc.ts` | Compiling raw configuration into a Boolean policy | Storing API keys or implementing providers |
 | `routes.ts` | Implemented provider/API routes and client budgets | Guessing unknown model capability |
 | `service.ts` | One-read use case, lifecycle, context-provenance validation | HTTP or concrete video wire blocks |
 | `media.ts` / `formats.ts` | Paths, file identity, bounded reads, container headers, base64 | Networking, TUI, transcoding |
 | `store.ts` / `references.ts` | In-memory content deduplication, references, byte-free persistent representation | Disk cache or rereading files after restoration |
-| `wire/kimi.ts` | Converts a Kimi `tool_result` into a base64 video block | Gemini or file I/O |
+| `wire/kimi.ts` | Converts a Kimi `tool_result` into a URL or base64 video block | Gemini or file I/O |
 | `wire/gemini.ts` | Preserves `functionResponse` grouping and appends `inlineData` | Kimi or file I/O |
 | `wire/index.ts` | Model-consistency checks and aggregate request budget | HTTP sending or credential reads |
 
@@ -34,7 +36,7 @@ Provider differences are intentionally not generalized into an adapter framework
 
 ## Data lifecycle and trust boundary
 
-`VideoReference` contains metadata only and is the sole type allowed in tool `details.readVideo`. `InlineVideo` contains base64, stays in `VideoStore`, and is used only to make a request copy immediately before sending. There are no `any` casts or conversions that disguise video as `ImageContent`.
+`VideoReference` contains metadata only and is the sole type allowed in tool `details.readVideo`. `ResidentVideo` contains either base64 or a remote URL with a credential-scope hash. It stays in `VideoStore` and is used only to make a request copy immediately before sending. Neither remote IDs nor credentials are included in `VideoReference`. There are no `any` casts or conversions that disguise video as `ImageContent`.
 
 `context` authorizes injectable markers only for successful `read_video` results in the current message. It checks the call ID and a process-generated reference. User input, ordinary `read` results, forged details, and error results cannot trigger injection. **Assistant messages are never rewritten**, preventing signature-replay damage.
 
@@ -46,8 +48,12 @@ Every transform returns a copy and never writes a real video block back to Pi's 
 
 ## Intentional limitations
 
-A raw-file budget is checked before reading, and a serialized-parameter budget is checked after request rewriting with all context included. On overflow, the behavior explicitly degrades to “video not provided”; it never silently switches to a Files API. Request mutations made by other extensions after this extension are outside its control.
+A raw-file budget is checked before reading, and a serialized-parameter budget is checked after request rewriting with all context included. On overflow, the behavior explicitly degrades to “video not provided”; it does not retry with another transport at request-rewrite time. Kimi uploads at tool execution time first, and uses bounded inline fallback on non-auth upload failure. Gemini never uploads. Request mutations made by other extensions after this extension are outside its control.
 
-File encoding is queued and process storage is bounded, but total RSS also includes Pi itself, temporary Buffers, SDK parameters, and serialization copies. The 96 MiB cache figure measures encoded strings, not a total-process memory guarantee.
+File loading, encoding and uploading are queued and process storage is bounded, but total RSS also includes Pi itself, temporary Buffers, SDK parameters, and serialization copies. The 96 MiB cache figure measures encoded strings and remote reference strings, not a total-process memory guarantee. Kimi accepts 100 MiB source files without creating a base64 cache entry; multipart Blob creation still temporarily copies bytes.
 
 Switching to a different video-enabled model on the same provider/endpoint can reuse resident content. Content is not reused across provider, API, or endpoint boundaries. Cleared or evicted references require the model to call the tool again. This is an explicit memory-lifecycle choice; the extension does not automatically restore videos or silently send them across services.
+
+## Kimi upload lifecycle
+
+The Pi binding resolves API-key/OAuth headers using the public model registry. The effective auth endpoint and normalized headers are hashed to scope cached uploads. Before injecting remote references, it resolves auth again; a mismatch omits the old reference. Upload success returns `ms://id`, immediately usable by the Kimi Anthropic adapter. HTTP 401/403 and cancellation surface without inline fallback. Other failures fall back only within the 35 MiB and inline-MIME budgets. Remote files are not automatically deleted. Reload/reset forgets their handles, and no disk cache or automatic session rehydration is added. Explicit `video: true` remains required; this change does not add automatic model capability discovery or a new Pi Chat Completions route.

@@ -30,7 +30,7 @@ test('external symlinks resolve to the real file before bounded reading', async 
 });
 test('empty, directory, unsupported extension and oversized files fail early', async (t) => {
   const ws = await workspace(t);
-  await assert.rejects(inspectVideo(ws.path, ws.cwd, 1), /inline client limit/);
+  await assert.rejects(inspectVideo(ws.path, ws.cwd, 1), /client file limit/);
   await writeFile(join(ws.cwd, 'empty.mp4'), '');
   await assert.rejects(inspectVideo('empty.mp4', ws.cwd, 1024), /empty/);
   await mkdir(join(ws.cwd, 'dir.mp4'));
@@ -59,6 +59,17 @@ test('renamed text or AVIF is not accepted as video', () => {
   assert.throws(() => detectVideoMime('.mp4', Buffer.from('not a video')));
   const avif = Buffer.from(BYTES); avif.write('avif', 8);
   assert.throws(() => detectVideoMime('.mp4', avif));
+});
+test('upload-only containers are sniffed but rejected by inline routes', () => {
+  for (const [extension, header, mime] of [
+    ['.ogv', Buffer.from('OggS'), 'video/ogg'],
+    ['.wmv', Buffer.from('3026b2758e66cf11a6d900aa0062ce6c', 'hex'), 'video/x-ms-wmv'],
+    ['.m4v', BYTES, 'video/x-m4v'], ['.3g2', BYTES, 'video/3gpp2'],
+  ]) {
+    assert.equal(detectVideoMime(extension, header, true), mime);
+    assert.throws(() => detectVideoMime(extension, header));
+    assert.throws(() => detectVideoMime(extension, Buffer.from('not video'), true));
+  }
 });
 test('store retains only metadata in references and deduplicates content', () => {
   const store = new VideoStore(1000);

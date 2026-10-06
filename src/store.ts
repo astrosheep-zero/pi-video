@@ -1,15 +1,18 @@
 import { newMarker } from "./references.ts";
 import type { EncodedVideo } from "./media.ts";
-import type { InlineVideo, VideoReference } from "./types.ts";
+import type { ResidentVideo, VideoReference } from "./types.ts";
+type VideoSource = { readonly data: string } | { readonly url: string; readonly uploadScope: string };
+export type PreparedVideo = Omit<EncodedVideo, "data"> & VideoSource;
 interface BlobEntry {
-  data: string;
+  source: VideoSource;
+  bytes: number;
   references: number;
 }
 interface StoredEntry {
   reference: VideoReference;
   blobKey: string;
 }
-/** Bounded, content-deduplicated memory. No disk cache, hydration, or remote handles. */
+/** Bounded, content-deduplicated memory. Neither bytes nor remote handles are persisted. */
 export class VideoStore {
   private readonly references = new Map<string, StoredEntry>();
   private readonly blobs = new Map<string, BlobEntry>();
@@ -25,12 +28,14 @@ export class VideoStore {
   }
   get bytes(): number { return this.byteCount; }
   get size(): number { return this.references.size; }
-  put(video: EncodedVideo, scope: string, callId: string): VideoReference {
-    if (video.data.length > this.maxBytes)
+  put(video: PreparedVideo, scope: string, callId: string): VideoReference {
+    const source: VideoSource = "data" in video ? { data: video.data } : { url: video.url, uploadScope: video.uploadScope };
+    const bytes = "data" in source ? source.data.length : source.url.length + source.uploadScope.length;
+    if (bytes > this.maxBytes)
       throw new Error("Encoded video exceeds the process-local memory budget");
-    const blobKey = `${scope}\0${video.sha256}`;
+    const blobKey = `${scope}\0${video.sha256}\0${"url" in source ? source.uploadScope + "\0" + source.url : "inline"}`;
     while (this.references.size >= this.maxReferences ||
-      this.byteCount + (this.blobs.has(blobKey) ? 0 : video.data.length) > this.maxBytes) {
+      this.byteCount + (this.blobs.has(blobKey) ? 0 : bytes) > this.maxBytes) {
       const oldest = this.references.keys().next().value;
       if (!oldest)
         throw new Error("Cannot reserve memory for video");
@@ -38,9 +43,9 @@ export class VideoStore {
     }
     let blob = this.blobs.get(blobKey);
     if (!blob) {
-      blob = { data: video.data, references: 0 };
+      blob = { source, bytes, references: 0 };
       this.blobs.set(blobKey, blob);
-      this.byteCount += blob.data.length;
+      this.byteCount += blob.bytes;
     }
     blob.references++;
     const reference: VideoReference = Object.freeze({ version: 1, marker: newMarker(), callId, scope,
@@ -48,7 +53,7 @@ export class VideoStore {
     this.references.set(reference.marker, { reference, blobKey });
     return reference;
   }
-  get(marker: string, scope: string): InlineVideo | undefined {
+  get(marker: string, scope: string): ResidentVideo | undefined {
     const entry = this.references.get(marker);
     if (!entry || entry.reference.scope !== scope)
       return undefined;
@@ -57,7 +62,17 @@ export class VideoStore {
       return undefined;
     this.references.delete(marker);
     this.references.set(marker, entry);
-    return { reference: entry.reference, data: blob.data };
+    return { reference: entry.reference, ...blob.source };
+  }
+  findUpload(scope: string, sha256: string, uploadScope: string): string | undefined {
+    for (const entry of this.references.values()) {
+      if (entry.reference.scope !== scope || entry.reference.sha256 !== sha256)
+        continue;
+      const source = this.blobs.get(entry.blobKey)?.source;
+      if (source && "url" in source && source.uploadScope === uploadScope)
+        return source.url;
+    }
+    return undefined;
   }
   remove(marker: string): void {
     const entry = this.references.get(marker);
@@ -66,7 +81,7 @@ export class VideoStore {
     this.references.delete(marker);
     const blob = this.blobs.get(entry.blobKey);
     if (blob && --blob.references === 0) {
-      this.byteCount -= blob.data.length;
+      this.byteCount -= blob.bytes;
       this.blobs.delete(entry.blobKey);
     }
   }

@@ -52,10 +52,12 @@ export function rewriteKimi(payload: unknown, resolve: ResolveVideo, reason?: st
             if (!seen.has(key)) {
               seen.add(key);
               videos++;
-              output.push({ type: "video", source: { type: "base64", media_type: video.reference.mimeType, data: video.data } });
+              output.push({ type: "video", source: "url" in video
+                ? { type: "url", url: video.url }
+                : { type: "base64", media_type: video.reference.mimeType, data: video.data } });
             }
             else
-              output.push({ type: "text", text: "[This same video is already attached inline earlier in this request.]" });
+              output.push({ type: "text", text: "[This same video is already attached earlier in this request.]" });
           }
           cursor = match.index + match[0].length;
         }

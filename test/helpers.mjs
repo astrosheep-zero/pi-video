@@ -62,8 +62,7 @@ export function harness(model, ws) {
   let active = ['read', 'write', 'bash', 'edit', 'other_plugin'];
   const ctx = { model, cwd: ws.cwd, signal: undefined, hasUI: true,
     ui: { notify: (value) => notifications.push(value), confirm: async () => true },
-    // Any credential lookup would be a regression in this inline-only implementation.
-    modelRegistry: new Proxy({}, { get() { throw new Error('Must not read provider credentials'); } }),
+    modelRegistry: { getApiKeyAndHeaders: async () => ({ ok: true, apiKey: 'offline-fixture-not-a-key' }) },
   };
   const pi = {
     on(event, handler) { const list = events.get(event) ?? []; list.push(handler); events.set(event, list); },
@@ -72,6 +71,7 @@ export function harness(model, ws) {
     getActiveTools: () => [...active], setActiveTools: (value) => { active = [...value]; },
   };
   const options = { agentDir: ws.agentDir, parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] },
+    fetch: async () => new Response(JSON.stringify({ id: 'file-fixture' }), { status: 200 }),
     renderText: (text) => ({ text, render: () => [text], invalidate() {} }) };
   async function emit(event, value = {}) {
     let result;

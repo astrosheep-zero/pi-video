@@ -5,6 +5,7 @@ export interface ModelIdentity {
   readonly id: string;
   readonly api: string;
   readonly baseUrl?: string;
+  readonly headers?: Readonly<Record<string, string>>;
 }
 export interface VideoRoute {
   readonly kind: VideoKind;
@@ -30,6 +31,13 @@ export interface InlineVideo {
   readonly reference: VideoReference;
   readonly data: string;
 }
+export interface UploadedVideo {
+  readonly reference: VideoReference;
+  readonly url: string;
+  /** Hash of the resolved endpoint and credentials, never persisted. */
+  readonly uploadScope: string;
+}
+export type ResidentVideo = InlineVideo | UploadedVideo;
 export interface VideoToolResult {
   content: {
     type: "text";
@@ -57,4 +65,4 @@ export interface WireResult {
 /** Resolve only markers authorized from genuine tool results by prepareContext for this request.
  * Wire encoders must not use the reference's original callId as a serialized protocol ID.
  */
-export type ResolveVideo = (marker: string) => InlineVideo | undefined;
+export type ResolveVideo = (marker: string) => ResidentVideo | undefined;

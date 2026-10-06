@@ -1,5 +1,14 @@
 # Verification record
 
+## Kimi Files alignment — 2026-10-06
+
+- Full TypeScript check passed against Pi 0.85.1.
+- 120 offline unit tests passed, including multipart bytes and auth headers, endpoint normalization, credential scoping, upload reuse, errors, cancellation, upload-only formats, and Gemini isolation.
+- 24 real Pi serializer cases passed before HTTP, covering Kimi inline/uploaded references and Gemini 2.5/3 ID handling. The existing fixture now explicitly enables all tested source and target model IDs.
+- No real Moonshot/Gemini API call was made. Synthetic headers test transport and validation, not video decoding or server-side format support.
+
+The older inline-only verification below is historical and does not describe the new Kimi path.
+
 ## Reverification of local changes (the historical record below is retained)
 
 - Removed the confirmation callback, UI prompt, and working-directory boundary check for videos outside the directory; retained real-path resolution, file-identity checks, size budgets, and cancellation.
